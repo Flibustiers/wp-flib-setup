@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.3 — 23/11/2026
+
+- Flib'SEO installé d'office (`Flibustiers/wp-flib-seo`, release 1.0.0) : référencement maison en remplacement de Yoast.
+
 ## 2.1.2 — 23/11/2026
 
 - Flib'Up installé depuis son dépôt dans l'organisation : `Flibustiers/wp-flib-up` (release 1.2.0).

@@ -24,7 +24,7 @@
  * Dépôt : https://github.com/Flibustiers/wp-flib-setup — basé sur FLIB - WP Setup 1.0 (Clément GUEZOU).
  */
 
-const FLIB_SETUP_VERSION  = '2.1.2';
+const FLIB_SETUP_VERSION  = '2.1.3';
 const FLIB_SETUP_VALIDITY = 7200; // secondes après le dépôt du fichier
 const FLIB_SETUP_MAX_TRY  = 5;
 
@@ -76,6 +76,11 @@ function flib_setup_config()
                 'flib-grilles' => [
                     'name'    => 'Flib Grilles (grilles de contenus filtrables)',
                     'repo'    => 'Flibustiers/wp-flib-grilles',
+                    'default' => true,
+                ],
+                'flib-seo' => [
+                    'name'    => "Flib'SEO (référencement, remplace Yoast)",
+                    'repo'    => 'Flibustiers/wp-flib-seo',
                     'default' => true,
                 ],
             ],
