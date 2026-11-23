@@ -49,7 +49,7 @@ Tout est en haut du fichier, dans `flib_setup_config()` :
 ],
 ```
 
-`default => false` : proposée mais décochée. Après modification : monter `FLIB_SETUP_VERSION`, compléter le CHANGELOG, committer, puis tag `vX.Y.Z` : la GitHub Action vérifie la syntaxe (PHP 7.4 à 8.4) et publie le fichier dans la release.
+`default => false` : proposée mais décochée. Après modification : monter `FLIB_SETUP_VERSION`, compléter le CHANGELOG, pousser sur `main` : la GitHub Action vérifie la syntaxe (PHP 7.4 à 8.4) puis crée automatiquement le tag `vX.Y.Z` et la release contenant le fichier.
 
 ## Jeton GitHub
 
