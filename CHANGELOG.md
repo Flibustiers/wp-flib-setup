@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.2 — 23/11/2026
+
+- Flib'Up installé depuis son dépôt dans l'organisation : `Flibustiers/wp-flib-up` (release 1.2.0).
+
 ## 2.1.1 — 23/11/2026
 
 - Flib'Up : dépôt corrigé (`ClementFlib/flibup_plugin`, public), l'installation ne renvoie plus « introuvable ».

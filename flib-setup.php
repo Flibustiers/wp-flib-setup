@@ -24,7 +24,7 @@
  * Dépôt : https://github.com/Flibustiers/wp-flib-setup — basé sur FLIB - WP Setup 1.0 (Clément GUEZOU).
  */
 
-const FLIB_SETUP_VERSION  = '2.1.1';
+const FLIB_SETUP_VERSION  = '2.1.2';
 const FLIB_SETUP_VALIDITY = 7200; // secondes après le dépôt du fichier
 const FLIB_SETUP_MAX_TRY  = 5;
 
@@ -70,8 +70,7 @@ function flib_setup_config()
             'github' => [
                 'flib-up' => [
                     'name'    => "Flib'Up (pop-ups)",
-                    // Dépôt public de Clément pour l'instant. Après transfert dans l'organisation : 'Flibustiers/wp-flib-up'.
-                    'repo'    => 'ClementFlib/flibup_plugin',
+                    'repo'    => 'Flibustiers/wp-flib-up',
                     'default' => true,
                 ],
                 'flib-grilles' => [
