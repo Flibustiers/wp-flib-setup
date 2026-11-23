@@ -4,6 +4,10 @@ name: Contrôle et release
 # - Push sur main : si la version FLIB_SETUP_VERSION n'a pas encore de release,
 #   le tag vX.Y.Z et la release (avec flib-setup.php) sont créés automatiquement.
 #   Pour publier une nouvelle version : monter FLIB_SETUP_VERSION + CHANGELOG, pousser sur main.
+# - Le jeton GitHub (secret de dépôt FLIB_GITHUB_TOKEN) est intégré au fichier de la release
+#   uniquement, jamais dans le code versionné.
+# - Après un changement de jeton : Actions › « Contrôle et release » › Run workflow
+#   (le fichier de la release existante est reconstruit avec le nouveau jeton).
 
 on:
   push:
@@ -49,8 +53,29 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
+      - name: Publier ?
+        id: publish
+        run: |
+          if [[ "${{ steps.version.outputs.exists }}" == "false" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "go=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Intégration du jeton GitHub
+        if: steps.publish.outputs.go == 'true'
+        env:
+          TOKEN: ${{ secrets.FLIB_GITHUB_TOKEN }}
+        run: |
+          if [[ -z "$TOKEN" ]]; then
+            echo "::warning::Secret FLIB_GITHUB_TOKEN absent : fichier publié sans jeton intégré."
+            exit 0
+          fi
+          [[ "$TOKEN" =~ ^[A-Za-z0-9_]+$ ]] || { echo "::error::Le secret FLIB_GITHUB_TOKEN contient des caractères inattendus."; exit 1; }
+          sed -i -E "s/^const FLIB_SETUP_EMBEDDED_TOKEN = '';/const FLIB_SETUP_EMBEDDED_TOKEN = '${TOKEN}';/" flib-setup.php
+          grep -q "^const FLIB_SETUP_EMBEDDED_TOKEN = '[A-Za-z0-9_]\+';" flib-setup.php || { echo "::error::Intégration du jeton impossible."; exit 1; }
+          php -l flib-setup.php
       - name: Notes de version (section du CHANGELOG)
-        if: steps.version.outputs.exists == 'false'
+        if: steps.publish.outputs.go == 'true'
         run: |
           awk -v v="${{ steps.version.outputs.version }}" '
             $0 ~ "^## "v { on=1; next }
@@ -59,7 +84,7 @@ jobs:
           ' CHANGELOG.md > notes.md
           [[ -s notes.md ]] || echo "Voir le CHANGELOG." > notes.md
       - name: Publication
-        if: steps.version.outputs.exists == 'false'
+        if: steps.publish.outputs.go == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}

@@ -53,7 +53,12 @@ Tout est en haut du fichier, dans `flib_setup_config()` :
 
 ## Jeton GitHub
 
-*Fine-grained*, propriétaire Flibustiers, *Only select repositories* : `flib-base` et les dépôts des extensions maison, permission *Contents : Read-only*. C'est le même jeton que celui des mises à jour intégrées (`FLIB_GITHUB_TOKEN`).
+Le fichier téléchargé depuis la release **contient déjà le jeton** : rien à saisir dans le formulaire.
+Il est injecté par la GitHub Action à partir du secret de dépôt `FLIB_GITHUB_TOKEN` (Settings › Secrets and variables › Actions) ; il n'apparaît jamais dans le code versionné. Ne pas diffuser le fichier de la release hors de l'agence.
+
+Jeton attendu : *fine-grained*, propriétaire Flibustiers, *Only select repositories* : `flib-base` et les dépôts des extensions maison, permission *Contents : Read-only*. C'est le même que celui des mises à jour intégrées (`FLIB_GITHUB_TOKEN` des sites).
+
+Après un renouvellement du jeton : mettre à jour le secret, puis Actions › « Contrôle et release » › *Run workflow* pour reconstruire le fichier de la release.
 
 ## Prérequis
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.0 — 23/11/2026
+
+- Jeton GitHub intégré au fichier de la release (secret de dépôt `FLIB_GITHUB_TOKEN`, injecté par la GitHub Action) : plus aucune saisie dans le formulaire. Le code versionné ne contient jamais le jeton.
+- Le champ reste disponible (« Utiliser un autre jeton ») pour forcer un autre jeton.
+- Le jeton utilisé est enregistré dans wp-config.php seulement s'il diffère de celui déjà présent.
+
 ## 2.0.0 — 23/11/2026
 
 Passage d'une extension à un **fichier unique** (`flib-setup.php`) à déposer à la racine du site depuis le gestionnaire de fichiers N0C.

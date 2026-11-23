@@ -24,9 +24,13 @@
  * Dépôt : https://github.com/Flibustiers/wp-flib-setup — basé sur FLIB - WP Setup 1.0 (Clément GUEZOU).
  */
 
-const FLIB_SETUP_VERSION  = '2.0.0';
+const FLIB_SETUP_VERSION  = '2.1.0';
 const FLIB_SETUP_VALIDITY = 7200; // secondes après le dépôt du fichier
 const FLIB_SETUP_MAX_TRY  = 5;
+
+// Jeton GitHub intégré : rempli automatiquement par la GitHub Action dans le fichier de la release
+// (secret FLIB_GITHUB_TOKEN du dépôt). Ne jamais l'écrire ici à la main : il serait versionné dans Git.
+const FLIB_SETUP_EMBEDDED_TOKEN = '';
 
 /* ===========================================================================
  * CONFIGURATION — listes modifiables
@@ -976,8 +980,9 @@ class Flib_Setup_Steps
             }
         }
 
-        if ($this->opts['save_token'] && '' !== $this->opts['token_input']) {
-            $constants['FLIB_GITHUB_TOKEN'] = $this->opts['token_input'];
+        if ($this->opts['save_token'] && '' !== $this->opts['token_to_save']
+            && ($constants['FLIB_GITHUB_TOKEN'] ?? '') !== $this->opts['token_to_save']) {
+            $constants['FLIB_GITHUB_TOKEN'] = $this->opts['token_to_save'];
             $changes[] = 'FLIB_GITHUB_TOKEN (mises à jour du thème et des extensions maison)';
         }
 
@@ -1784,9 +1789,16 @@ function flib_setup_form($url, $age)
             <span class="small">Sert aussi à nommer le thème enfant et le manifest.</span></div>
         <div class="row"><label for="temp_url">URL temporaire</label><input id="temp_url" name="temp_url" type="url" value="<?php echo $e($url); ?>">
             <label class="cb"><input type="checkbox" name="write_urls" value="1" checked> Écrire <code>WP_HOME</code> et <code>WP_SITEURL</code> dans wp-config.php (sauvegarde faite avant)</label></div>
+        <?php if ('' !== FLIB_SETUP_EMBEDDED_TOKEN) : ?>
+        <div class="row"><label>Jeton GitHub</label>
+            <span>Intégré au fichier ✔ (aucune saisie nécessaire).</span>
+            <label class="cb"><input type="checkbox" name="save_token" value="1" checked> L'enregistrer dans wp-config.php (<code>FLIB_GITHUB_TOKEN</code>, pour les mises à jour du thème et des extensions maison)</label>
+            <details><summary class="small">Utiliser un autre jeton</summary><input id="github_token" name="github_token" type="password" autocomplete="off" placeholder="github_pat_…"></details></div>
+        <?php else : ?>
         <div class="row"><label for="github_token">Jeton GitHub</label><input id="github_token" name="github_token" type="password" autocomplete="off" placeholder="<?php echo $token ? 'Déjà défini dans wp-config.php' : 'github_pat_…'; ?>">
             <label class="cb"><input type="checkbox" name="save_token" value="1" checked> L'enregistrer dans wp-config.php (<code>FLIB_GITHUB_TOKEN</code>, pour les mises à jour du thème et des extensions maison)</label>
-            <span class="small">Jeton <em>fine-grained</em> Flibustiers, <em>Contents : Read-only</em>, avec accès à flib-base et aux extensions maison.<?php echo $token ? ' Laisser vide pour garder le jeton actuel.' : ''; ?></span></div>
+            <span class="small">Jeton <em>fine-grained</em> Flibustiers, <em>Contents : Read-only</em>, avec accès à flib-base et aux extensions maison.<?php echo $token ? ' Laisser vide pour garder le jeton actuel.' : ' Astuce : télécharger le fichier depuis la release GitHub, le jeton y est intégré.'; ?></span></div>
+        <?php endif; ?>
         <div class="row"><label>Favicon et manifest</label>
             <span>Archive .zip : <input type="file" name="favicon_zip" accept=".zip,application/zip"></span>
             <span>ou dossier : <input type="file" name="favicon_files[]" webkitdirectory directory multiple></span>
@@ -1859,7 +1871,9 @@ function flib_setup_read_options(array $config)
     }
 
     $token_input = preg_replace('/[^A-Za-z0-9_]/', '', (string) ($post['github_token'] ?? ''));
-    $token       = '' !== $token_input ? $token_input : (defined('FLIB_GITHUB_TOKEN') ? (string) FLIB_GITHUB_TOKEN : '');
+    // Priorité : jeton saisi > jeton intégré au fichier > jeton déjà présent dans wp-config.php.
+    $token_to_save = '' !== $token_input ? $token_input : FLIB_SETUP_EMBEDDED_TOKEN;
+    $token         = '' !== $token_to_save ? $token_to_save : (defined('FLIB_GITHUB_TOKEN') ? (string) FLIB_GITHUB_TOKEN : '');
 
     $flag = static function ($key) use ($post) {
         return !empty($post[$key]);
@@ -1873,7 +1887,7 @@ function flib_setup_read_options(array $config)
         'site_name'        => $site_name,
         'temp_url'         => flib_setup_clean_url($post['temp_url'] ?? ''),
         'write_urls'       => $flag('write_urls'),
-        'token_input'      => $token_input,
+        'token_to_save'    => $token_to_save,
         'token'            => $token,
         'save_token'       => $flag('save_token'),
         'theme'            => $flag('theme'),
