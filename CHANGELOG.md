@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1 — 23/11/2026
+
+- Flib'Up : dépôt corrigé (`ClementFlib/flibup_plugin`, public), l'installation ne renvoie plus « introuvable ».
+
 ## 2.1.0 — 23/11/2026
 
 - Jeton GitHub intégré au fichier de la release (secret de dépôt `FLIB_GITHUB_TOKEN`, injecté par la GitHub Action) : plus aucune saisie dans le formulaire. Le code versionné ne contient jamais le jeton.
