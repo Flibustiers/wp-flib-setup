@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0 — 25/11/2026
+
+- Nouvelle étape « Mu-plugins » : création du dossier `wp-content/mu-plugins` s'il n'existe pas et installation des mu-plugins maison depuis leur dernière release GitHub (seul le fichier principal est copié).
+- Premier mu-plugin installé d'office : Flib Images WebP (`Flibustiers/wp-flib-images-webp`) — réduction à 2000 px et conversion WebP des JPEG / PNG à l'envoi dans la médiathèque.
+- Liste `mu_plugins` ajoutée dans `flib_setup_config()`, case à cocher dans le formulaire.
+
 ## 2.1.3 — 23/11/2026
 
 - Flib'SEO installé d'office (`Flibustiers/wp-flib-seo`, release 1.0.0) : référencement maison en remplacement de Yoast.
