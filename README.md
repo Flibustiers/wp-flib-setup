@@ -25,6 +25,7 @@ Le fichier fonctionne même si l'administration n'est pas encore accessible par 
 | Pages | Accueil (page d'accueil statique), Contact, Mentions légales, Politique de confidentialité. |
 | Thème | flib-base (dernière release), thème enfant au nom du site copié depuis `theme/flib-enfant`, activation, suppression des autres thèmes. |
 | Extensions | Maison (releases GitHub) et WordPress.org, installées et activées. Hello Dolly et Akismet supprimés. |
+| Mu-plugins | Dossier `wp-content/mu-plugins` créé si absent ; mu-plugins maison copiés depuis leur dernière release GitHub (fichier principal seul) : Flib Images WebP (conversion WebP à l'envoi). Toujours actifs, sans mise à jour automatique. |
 | Menu | « Menu principal » (Accueil, Contact) pour le bloc Navigation de l'en-tête flib-base. |
 | .htaccess | Règles de réécriture WordPress, en-têtes de sécurité (HSTS, nosniff, SAMEORIGIN, Referrer-Policy, Permissions-Policy). |
 | Favicon | Zip ou dossier : fichiers copiés à la racine, nom du site reporté dans le manifest, balises ajoutées par le mu-plugin `flib-favicon.php`. |
@@ -47,6 +48,9 @@ Tout est en haut du fichier, dans `flib_setup_config()` :
 'github' => [
     'flib-truc' => ['name' => 'Flib Truc', 'repo' => 'Flibustiers/wp-flib-truc', 'default' => true],
 ],
+'mu_plugins' => [   // seul « file » est copié depuis le .zip de la release dans wp-content/mu-plugins/
+    'flib-truc' => ['name' => 'Flib Truc', 'repo' => 'Flibustiers/wp-flib-truc', 'file' => 'flib-truc.php', 'default' => true],
+],
 ```
 
 `default => false` : proposée mais décochée. Après modification : monter `FLIB_SETUP_VERSION`, compléter le CHANGELOG, pousser sur `main` : la GitHub Action vérifie la syntaxe (PHP 7.4 à 8.4) puis crée automatiquement le tag `vX.Y.Z` et la release contenant le fichier.
@@ -56,7 +60,7 @@ Tout est en haut du fichier, dans `flib_setup_config()` :
 Le fichier téléchargé depuis la release **contient déjà le jeton** : rien à saisir dans le formulaire.
 Il est injecté par la GitHub Action à partir du secret de dépôt `FLIB_GITHUB_TOKEN` (Settings › Secrets and variables › Actions) ; il n'apparaît jamais dans le code versionné. Ne pas diffuser le fichier de la release hors de l'agence.
 
-Jeton attendu : *fine-grained*, propriétaire Flibustiers, *Only select repositories* : `flib-base` et les dépôts des extensions maison, permission *Contents : Read-only*. C'est le même que celui des mises à jour intégrées (`FLIB_GITHUB_TOKEN` des sites).
+Jeton attendu : *fine-grained*, propriétaire Flibustiers, *Only select repositories* : `flib-base` et les dépôts des extensions et mu-plugins maison (dont `wp-flib-images-webp`), permission *Contents : Read-only*. C'est le même que celui des mises à jour intégrées (`FLIB_GITHUB_TOKEN` des sites).
 
 Après un renouvellement du jeton : mettre à jour le secret, puis Actions › « Contrôle et release » › *Run workflow* pour reconstruire le fichier de la release.
 

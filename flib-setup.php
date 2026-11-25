@@ -24,7 +24,7 @@
  * Dépôt : https://github.com/Flibustiers/wp-flib-setup — basé sur FLIB - WP Setup 1.0 (Clément GUEZOU).
  */
 
-const FLIB_SETUP_VERSION  = '2.1.3';
+const FLIB_SETUP_VERSION  = '2.2.0';
 const FLIB_SETUP_VALIDITY = 7200; // secondes après le dépôt du fichier
 const FLIB_SETUP_MAX_TRY  = 5;
 
@@ -94,6 +94,17 @@ function flib_setup_config()
                 'forminator'                                            => ['name' => 'Forminator', 'default' => true],
                 'matomo'                                                => ['name' => 'Matomo Analytics', 'default' => true],
                 'tarteaucitronjs'                                       => ['name' => 'tarteaucitron.io (bandeau cookies)', 'default' => true],
+            ],
+        ],
+
+        // Mu-plugins maison : dépôts privés Flibustiers, release GitHub contenant un .zip.
+        // Seul le fichier « file » est copié dans wp-content/mu-plugins/ (dossier créé si absent).
+        'mu_plugins' => [
+            'flib-images-webp' => [
+                'name'    => 'Flib Images WebP (conversion WebP à l\'envoi des images)',
+                'repo'    => 'Flibustiers/wp-flib-images-webp',
+                'file'    => 'flib-images-webp.php',
+                'default' => true,
             ],
         ],
     ];
@@ -726,6 +737,70 @@ class Flib_Setup_Installer
         $result = activate_plugin($plugin_file, '', false, false);
 
         return is_wp_error($result) ? $result : true;
+    }
+
+    /**
+     * Copie un seul fichier d'un zip dans wp-content/mu-plugins/ (dossier créé si absent).
+     * Le fichier est cherché à la racine de l'archive, sinon dans ses sous-dossiers.
+     *
+     * @param string $zip  Fichier zip temporaire (supprimé ensuite).
+     * @param string $file Nom du fichier à copier (ex. « flib-images-webp.php »).
+     * @return string|WP_Error Chemin installé.
+     */
+    public static function install_mu_plugin_zip($zip, $file)
+    {
+        global $wp_filesystem;
+
+        $file = wp_basename($file);
+        if ('php' !== strtolower(pathinfo($file, PATHINFO_EXTENSION))) {
+            @unlink($zip);
+            return new WP_Error('flib_install', 'nom de fichier de mu-plugin invalide (' . $file . ')');
+        }
+
+        $tmp   = trailingslashit(get_temp_dir()) . 'flib-setup-' . wp_generate_password(8, false);
+        $unzip = unzip_file($zip, $tmp);
+        @unlink($zip);
+
+        if (is_wp_error($unzip)) {
+            $wp_filesystem->delete($tmp, true);
+            return $unzip;
+        }
+
+        $root   = self::single_root($tmp);
+        $source = is_file($root . '/' . $file) ? $root . '/' . $file : '';
+        if ('' === $source) {
+            $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($tmp, FilesystemIterator::SKIP_DOTS));
+            foreach ($iterator as $item) {
+                if ($item->isFile() && $file === $item->getFilename() && false === strpos($item->getPathname(), '__MACOSX')) {
+                    $source = $item->getPathname();
+                    break;
+                }
+            }
+        }
+
+        // Contrôle minimal : un fichier PHP avec un en-tête d'extension WordPress.
+        $head = '' !== $source ? (string) file_get_contents($source, false, null, 0, 8192) : '';
+        if ('' === $source || 0 !== strpos(ltrim($head), '<?php') || false === stripos($head, 'Plugin Name:')) {
+            $wp_filesystem->delete($tmp, true);
+            return new WP_Error('flib_install', '« ' . $file . ' » absent de l\'archive ou sans en-tête d\'extension');
+        }
+
+        $dir = WPMU_PLUGIN_DIR;
+        if (!is_dir($dir) && !wp_mkdir_p($dir)) {
+            $wp_filesystem->delete($tmp, true);
+            return new WP_Error('flib_install', 'création du dossier wp-content/mu-plugins impossible');
+        }
+
+        $dest = trailingslashit($dir) . $file;
+        $copy = @copy($source, $dest);
+        $wp_filesystem->delete($tmp, true);
+
+        if (!$copy) {
+            return new WP_Error('flib_install', 'copie dans wp-content/mu-plugins impossible');
+        }
+        @chmod($dest, FS_CHMOD_FILE);
+
+        return $dest;
     }
 
     /**
@@ -1375,6 +1450,43 @@ class Flib_Setup_Steps
         $this->language_packs();
     }
 
+    /* -----------------------------------------------------------------------
+     * 8 bis. Mu-plugins maison (wp-content/mu-plugins)
+     * -------------------------------------------------------------------- */
+
+    public function mu_plugins(Flib_Setup_GitHub $github)
+    {
+        $this->log->section('Mu-plugins');
+
+        $list = $this->config['mu_plugins'] ?? [];
+
+        foreach ($this->opts['mu_plugins'] as $slug) {
+            if (empty($list[$slug])) {
+                continue;
+            }
+            $mu = $list[$slug];
+
+            $release = $github->download_latest_release($mu['repo']);
+            if (is_wp_error($release)) {
+                $this->log->wp_error($release, $mu['name']);
+                continue;
+            }
+
+            $installed = Flib_Setup_Installer::install_mu_plugin_zip($release['file'], $mu['file']);
+            if (is_wp_error($installed)) {
+                $this->log->wp_error($installed, $mu['name']);
+                continue;
+            }
+
+            $this->log->ok($mu['name'] . ' ' . $release['version'] . ' : ' . $mu['file'] . ' copié dans wp-content/mu-plugins (toujours actif, pas de mise à jour automatique).');
+
+            // Même extension installée aussi en classique : signalée (les deux cohabitent sans conflit).
+            if (Flib_Setup_Installer::plugin_file($slug)) {
+                $this->log->warn($mu['name'] . ' est aussi présente dans wp-content/plugins : une seule des deux suffit.');
+            }
+        }
+    }
+
     private function activate($slug, $label)
     {
         $file = Flib_Setup_Installer::plugin_file($slug);
@@ -1720,9 +1832,9 @@ function flib_setup_main()
         $log->section('Préparation');
         $log->wp_error($boot);
     }
-    if (($opts['theme'] || !empty($opts['plugins_github'])) && !$github->has_token()) {
+    if (($opts['theme'] || !empty($opts['plugins_github']) || !empty($opts['mu_plugins'])) && !$github->has_token()) {
         $log->section('Préparation');
-        $log->error('Aucun jeton GitHub : flib-base et les extensions maison ne seront pas installés.');
+        $log->error('Aucun jeton GitHub : flib-base, les extensions et mu-plugins maison ne seront pas installés.');
     }
 
     // L'ordre compte : thème avant menu (thème en blocs), extensions avant traductions, .htaccess après permaliens.
@@ -1745,6 +1857,9 @@ function flib_setup_main()
     }
     if ($can_install && (!empty($opts['plugins_github']) || !empty($opts['plugins_wporg']))) {
         $steps->plugins($github);
+    }
+    if ($can_install && !empty($opts['mu_plugins']) && $github->has_token()) {
+        $steps->mu_plugins($github);
     }
     if ($opts['menu']) {
         $steps->menu();
@@ -1818,6 +1933,14 @@ function flib_setup_form($url, $age)
         <?php foreach ($config['plugins']['github'] as $slug => $p) : ?>
             <label class="cb"><input type="checkbox" name="plugins_github[]" value="<?php echo $e($slug); ?>" <?php echo (!isset($p['default']) || $p['default']) ? 'checked' : ''; ?>> <?php echo $e($p['name']); ?> <code><?php echo $e($p['repo']); ?></code></label>
         <?php endforeach; ?>
+
+        <?php if (!empty($config['mu_plugins'])) : ?>
+        <h2>Mu-plugins maison (GitHub)</h2>
+        <?php foreach ($config['mu_plugins'] as $slug => $p) : ?>
+            <label class="cb"><input type="checkbox" name="mu_plugins[]" value="<?php echo $e($slug); ?>" <?php echo (!isset($p['default']) || $p['default']) ? 'checked' : ''; ?>> <?php echo $e($p['name']); ?> <code><?php echo $e($p['repo']); ?></code></label>
+        <?php endforeach; ?>
+        <span class="small">Copiés dans <code>wp-content/mu-plugins/</code> (dossier créé si absent) : toujours actifs, sans mise à jour automatique.</span>
+        <?php endif; ?>
 
         <h2>Extensions WordPress.org</h2>
         <?php foreach ($config['plugins']['wporg'] as $slug => $p) : ?>
@@ -1900,6 +2023,7 @@ function flib_setup_read_options(array $config)
         'delete_themes'    => $flag('delete_themes'),
         'plugins_github'   => $list('plugins_github', $config['plugins']['github']),
         'plugins_wporg'    => $list('plugins_wporg', $config['plugins']['wporg']),
+        'mu_plugins'       => $list('mu_plugins', $config['mu_plugins'] ?? []),
         'settings'         => $flag('settings'),
         'noindex'          => $flag('noindex'),
         'cleanup'          => $flag('cleanup'),
